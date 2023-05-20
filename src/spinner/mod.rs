@@ -101,6 +101,7 @@ mod tests {
     fn test_new() {
         let spinner = Spinner::new();
         assert_eq!(spinner.is_running(), false);
+        assert_eq!(*spinner.paused.0.lock().unwrap(), false);
     }
 
     #[test]
