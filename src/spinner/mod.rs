@@ -1,8 +1,11 @@
 use self::{message::SpinnerMessage, state::SpinnerState};
 use crate::{SpinnerError, SpinnerResult};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Condvar, Mutex,
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Condvar, Mutex,
+    },
+    thread,
 };
 
 mod alignment;
@@ -36,6 +39,10 @@ impl Spinner {
         if self.is_running() {
             return Err(SpinnerError::new("Spinner is already running"));
         }
+        let running = self.running.clone();
+        let paused = self.paused.clone();
+        let mut state = self.state.clone();
+        thread::spawn(move || state.spin(running, paused));
         self.running.store(true, Ordering::SeqCst);
         Ok(())
     }
@@ -146,6 +153,51 @@ mod tests {
         assert_eq!(spinner.start().is_err(), true);
         assert_eq!(spinner.stop().is_ok(), true);
         assert_eq!(spinner.is_running(), false);
+    }
+
+    #[test]
+    fn test_start_multiple_times() {
+        let mut spinner = Spinner::new();
+        assert!(!spinner.is_running());
+
+        spinner.start().unwrap();
+        assert!(spinner.is_running());
+
+        let result = spinner.start();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Spinner is already running"
+        );
+
+        spinner.stop().unwrap();
+        assert!(!spinner.is_running());
+    }
+
+    #[test]
+    fn test_stop_multiple_times() {
+        let mut spinner = Spinner::new();
+        assert!(!spinner.is_running());
+
+        let result = spinner.stop();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Spinner is not running");
+
+        spinner.start().unwrap();
+        assert!(spinner.is_running());
+
+        spinner.stop().unwrap();
+        assert!(!spinner.is_running());
+
+        let result = spinner.stop();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Spinner is not running");
+
+        spinner.start().unwrap();
+        assert!(spinner.is_running());
+
+        spinner.stop().unwrap();
+        assert!(!spinner.is_running());
     }
 
     #[test]

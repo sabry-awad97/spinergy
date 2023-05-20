@@ -1,3 +1,5 @@
+use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
+
 use super::{channel::Channel, message::UpdateMessage};
 use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult};
 
@@ -16,6 +18,14 @@ impl SpinnerState {
         self.channel
             .try_send(SpinnerMessage::Update(Ok(message)))
             .map_err(|_| SpinnerError::new("Failed to send message through channel"))
+    }
+
+    pub fn spin(
+        &mut self,
+        running: Arc<AtomicBool>,
+        paused: Arc<(Mutex<bool>, Condvar)>,
+    ) -> SpinnerResult<()> {
+        Ok(())
     }
 }
 
