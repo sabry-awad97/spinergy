@@ -27,3 +27,40 @@ impl Write for SpinnerStream {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_spinner_stream_default() {
+        let stream = SpinnerStream::default();
+        assert!(matches!(stream, SpinnerStream::Stdout));
+    }
+
+    #[test]
+    fn test_spinner_stream_write_stdout() {
+        let mut stream = SpinnerStream::Stdout;
+        let message = "Hello, world!";
+        assert_eq!(stream.write(message.as_bytes()).unwrap(), message.len());
+    }
+
+    #[test]
+    fn test_spinner_stream_write_stderr() {
+        let mut stream = SpinnerStream::Stderr;
+        let message = "Hello, world!";
+        assert_eq!(stream.write(message.as_bytes()).unwrap(), message.len());
+    }
+
+    #[test]
+    fn test_spinner_stream_flush_stdout() {
+        let mut stream = SpinnerStream::Stdout;
+        assert!(stream.flush().is_ok());
+    }
+
+    #[test]
+    fn test_spinner_stream_flush_stderr() {
+        let mut stream = SpinnerStream::Stderr;
+        assert!(stream.flush().is_ok());
+    }
+}
