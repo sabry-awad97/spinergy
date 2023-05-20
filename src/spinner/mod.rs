@@ -53,7 +53,7 @@ impl Spinner {
     }
 
     pub fn pause(&mut self) -> SpinnerResult<()> {
-        if !self.running.load(Ordering::SeqCst) {
+        if !self.is_running() {
             return Err(SpinnerError::new("Spinner is not running"));
         }
         let (lock, cvar) = &*self.paused;
@@ -62,6 +62,20 @@ impl Spinner {
             return Err(SpinnerError::new("Spinner is already paused"));
         }
         *paused = true;
+        cvar.notify_one();
+        Ok(())
+    }
+
+    pub fn resume(&mut self) -> SpinnerResult<()> {
+        if !self.is_running() {
+            return Err(SpinnerError::new("Spinner is not running"));
+        }
+        let (lock, cvar) = &*self.paused;
+        let mut paused = lock.lock().unwrap();
+        if !*paused {
+            return Err(SpinnerError::new("Spinner is not paused"));
+        }
+        *paused = false;
         cvar.notify_one();
         Ok(())
     }
@@ -152,5 +166,32 @@ mod tests {
     fn test_pause_stopped_spinner() {
         let mut spinner = Spinner::new();
         assert_eq!(spinner.pause().is_err(), true);
+    }
+
+    #[test]
+    fn test_resume_spinner() {
+        let mut spinner = Spinner::new();
+        spinner.start().unwrap();
+        spinner.pause().unwrap();
+        assert_eq!(spinner.resume().is_ok(), true);
+    }
+
+    #[test]
+    fn test_resume_running_spinner() {
+        let mut spinner = Spinner::new();
+        spinner.start().unwrap();
+        assert_eq!(spinner.resume().is_err(), true);
+    }
+    #[test]
+    fn test_resume_unpaused_spinner() {
+        let mut spinner = Spinner::new();
+        spinner.start().unwrap();
+        assert_eq!(spinner.resume().is_err(), true);
+    }
+
+    #[test]
+    fn test_resume_stopped_spinner() {
+        let mut spinner = Spinner::new();
+        assert_eq!(spinner.resume().is_err(), true);
     }
 }
