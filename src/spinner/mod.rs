@@ -1,9 +1,9 @@
+use self::{message::SpinnerMessage, state::SpinnerState};
+use crate::{SpinnerError, SpinnerResult};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-
-use crate::{SpinnerError, SpinnerResult};
 
 mod alignment;
 mod builtins;
@@ -15,12 +15,14 @@ mod stream;
 
 pub struct Spinner {
     running: Arc<AtomicBool>,
+    state: SpinnerState,
 }
 
 impl Spinner {
     pub fn new() -> Self {
         let running = Arc::new(AtomicBool::new(false));
-        Self { running }
+        let state = SpinnerState::new();
+        Self { running, state }
     }
 
     pub fn start(&mut self) -> SpinnerResult<()> {
@@ -32,6 +34,9 @@ impl Spinner {
     }
 
     pub fn stop(&mut self) -> SpinnerResult<()> {
+        if self.state.channel.try_send(SpinnerMessage::Stop).is_err() {
+            return Err(SpinnerError::new("Failed to send message through channel"));
+        }
         self.running.store(false, Ordering::SeqCst);
         Ok(())
     }

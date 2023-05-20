@@ -1,3 +1,4 @@
+pub use colored::Color;
 pub use error::{SpinnerError, SpinnerResult};
 pub use spinner::Spinner;
 
