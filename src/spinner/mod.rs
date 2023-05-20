@@ -36,3 +36,24 @@ impl Spinner {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let spinner = Spinner::new();
+        assert_eq!(spinner.running.load(Ordering::SeqCst), false);
+    }
+
+    #[test]
+    fn test_start_stop() {
+        let mut spinner = Spinner::new();
+        assert_eq!(spinner.start().is_ok(), true);
+        assert_eq!(spinner.running.load(Ordering::SeqCst), true);
+        assert_eq!(spinner.start().is_err(), true);
+        assert_eq!(spinner.stop().is_ok(), true);
+        assert_eq!(spinner.running.load(Ordering::SeqCst), false);
+    }
+}
