@@ -26,3 +26,24 @@ where
         self.receiver.try_recv()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_send_receive() {
+        let channel = Channel::new();
+        let message = "Hello, world!".to_string();
+        channel.try_send(message.clone()).unwrap();
+        let received = channel.try_receive().unwrap();
+        assert_eq!(received, message);
+    }
+
+    #[test]
+    fn test_receive_empty() {
+        let channel = Channel::<String>::new();
+        let result = channel.try_receive();
+        assert!(result.is_err());
+    }
+}
