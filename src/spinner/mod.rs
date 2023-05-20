@@ -194,4 +194,30 @@ mod tests {
         let mut spinner = Spinner::new();
         assert_eq!(spinner.resume().is_err(), true);
     }
+
+    #[test]
+    fn test_pause_resume_multiple_times() {
+        let mut spinner = Spinner::new();
+        assert!(spinner.start().is_ok());
+        assert!(spinner.pause().is_ok());
+        assert!(spinner.resume().is_ok());
+        assert!(spinner.pause().is_ok());
+        assert!(spinner.resume().is_ok());
+        assert!(spinner.stop().is_ok());
+    }
+
+    #[test]
+    fn test_resume_while_not_paused() {
+        let mut spinner = Spinner::new();
+        assert!(spinner.start().is_ok());
+        assert!(spinner.resume().is_err());
+        assert!(spinner.stop().is_ok());
+    }
+
+    #[test]
+    fn test_drop() {
+        let mut spinner = Spinner::new();
+        assert!(spinner.start().is_ok());
+        drop(spinner);
+    }
 }
