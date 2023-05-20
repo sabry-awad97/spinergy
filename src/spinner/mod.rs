@@ -26,7 +26,7 @@ impl Spinner {
     }
 
     pub fn start(&mut self) -> SpinnerResult<()> {
-        if self.running.load(Ordering::SeqCst) {
+        if self.is_running() {
             return Err(SpinnerError::new("Spinner is already running"));
         }
         self.running.store(true, Ordering::SeqCst);
@@ -34,7 +34,7 @@ impl Spinner {
     }
 
     pub fn stop(&mut self) -> SpinnerResult<()> {
-        if !self.running.load(Ordering::SeqCst) {
+        if !self.is_running() {
             return Err(SpinnerError::new("Spinner is not running"));
         }
         self.state
