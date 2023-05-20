@@ -2,7 +2,7 @@ use self::{message::SpinnerMessage, state::SpinnerState};
 use crate::{SpinnerError, SpinnerResult};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Condvar, Mutex,
 };
 
 mod alignment;
@@ -15,14 +15,21 @@ mod stream;
 
 pub struct Spinner {
     running: Arc<AtomicBool>,
+    paused: Arc<(Mutex<bool>, Condvar)>,
     state: SpinnerState,
 }
 
 impl Spinner {
     pub fn new() -> Self {
         let running = Arc::new(AtomicBool::new(false));
+        let paused = Arc::new((Mutex::new(false), Condvar::new()));
+
         let state = SpinnerState::new();
-        Self { running, state }
+        Self {
+            running,
+            state,
+            paused,
+        }
     }
 
     pub fn start(&mut self) -> SpinnerResult<()> {
@@ -42,6 +49,20 @@ impl Spinner {
             .try_send(SpinnerMessage::Stop)
             .map_err(|_| SpinnerError::new("Failed to send message through channel"))?;
         self.running.store(false, Ordering::SeqCst);
+        Ok(())
+    }
+
+    pub fn pause(&mut self) -> SpinnerResult<()> {
+        if !self.running.load(Ordering::SeqCst) {
+            return Err(SpinnerError::new("Spinner is not running"));
+        }
+        let (lock, cvar) = &*self.paused;
+        let mut paused = lock.lock().unwrap();
+        if *paused {
+            return Err(SpinnerError::new("Spinner is already paused"));
+        }
+        *paused = true;
+        cvar.notify_one();
         Ok(())
     }
 
@@ -110,5 +131,26 @@ mod tests {
         assert_eq!(spinner.start().is_err(), true);
         assert_eq!(spinner.stop().is_ok(), true);
         assert_eq!(spinner.is_running(), false);
+    }
+
+    #[test]
+    fn test_pause_spinner() {
+        let mut spinner = Spinner::new();
+        spinner.start().unwrap();
+        assert_eq!(spinner.pause().is_ok(), true);
+    }
+
+    #[test]
+    fn test_pause_paused_spinner() {
+        let mut spinner = Spinner::new();
+        spinner.start().unwrap();
+        spinner.pause().unwrap();
+        assert_eq!(spinner.pause().is_err(), true);
+    }
+
+    #[test]
+    fn test_pause_stopped_spinner() {
+        let mut spinner = Spinner::new();
+        assert_eq!(spinner.pause().is_err(), true);
     }
 }
