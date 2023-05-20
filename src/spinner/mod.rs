@@ -53,6 +53,31 @@ mod tests {
     }
 
     #[test]
+    fn test_start_spinner() {
+        let mut spinner = Spinner::new();
+        let result = spinner.start();
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(spinner.running.load(Ordering::SeqCst), true);
+    }
+
+    #[test]
+    fn test_start_running_spinner() {
+        let mut spinner = Spinner::new();
+        spinner.running.store(true, Ordering::SeqCst);
+        let result = spinner.start();
+        assert_eq!(result.is_err(), true);
+        assert_eq!(spinner.running.load(Ordering::SeqCst), true);
+    }
+
+    #[test]
+    fn test_stop_spinner() {
+        let mut spinner = Spinner::new();
+        let result = spinner.stop();
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(spinner.running.load(Ordering::SeqCst), false);
+    }
+
+    #[test]
     fn test_start_stop() {
         let mut spinner = Spinner::new();
         assert_eq!(spinner.start().is_ok(), true);
