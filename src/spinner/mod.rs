@@ -8,13 +8,13 @@ use std::{
     thread,
 };
 
-mod alignment;
+pub mod alignment;
 mod builtins;
 mod channel;
-mod event;
+pub mod event;
 mod message;
 mod state;
-mod stream;
+pub mod stream;
 
 pub struct Spinner {
     running: Arc<AtomicBool>,
