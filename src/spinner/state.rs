@@ -1,8 +1,10 @@
 use std::io::Write;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
+use std::thread;
+use std::time::Duration;
 
-use super::builtins::SpinnerStyle;
+use super::builtins::{get_spinner_data, SpinnerStyle};
 use super::{channel::Channel, message::UpdateMessage};
 use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult, SpinnerStream};
 
@@ -10,9 +12,11 @@ use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult, Spinn
 pub struct SpinnerState {
     channel: Channel<SpinnerMessage>,
     output: Arc<Mutex<SpinnerStream>>,
-    dot_count: usize,
+    dots: String,
     text: String,
     spinner_style: SpinnerStyle,
+    frames: Vec<String>,
+    frame_duration: u64,
 }
 
 impl SpinnerState {
@@ -22,16 +26,21 @@ impl SpinnerState {
         let stream = SpinnerStream::default();
         let output = Arc::new(Mutex::new(stream));
 
-        let (text, dot_count) = trim_trailing_dots(message);
+        let (text, dots) = trim_trailing_dots(message);
 
         let spinner_style = SpinnerStyle::default();
+        let data = get_spinner_data(&spinner_style);
+        let frames = data.frames;
+        let frame_duration = data.frame_duration;
 
         Self {
             channel,
             output,
-            dot_count,
+            dots,
             text,
             spinner_style,
+            frames,
+            frame_duration,
         }
     }
 
@@ -55,6 +64,9 @@ impl SpinnerState {
         write!(self.output.lock().unwrap(), "\x1B[?25l")
             .map_err(|e| SpinnerError::new(&e.to_string()))?; // hide cursor
 
+        let mut dot_count = self.dots.len();
+        let mut current_index = 0;
+
         loop {
             if !running.load(Ordering::SeqCst) {
                 break;
@@ -66,6 +78,18 @@ impl SpinnerState {
                 paused = cvar.wait(paused).unwrap();
             }
 
+            let frames = &self.frames;
+            let frames_length = frames.len();
+            let frame = &frames[current_index % frames_length];
+            let dots = ".".repeat(dot_count.min(self.dots.len()));
+
+            self.print_frame(&frame, &dots)?;
+
+            current_index = (current_index + 1) % frames_length;
+            dot_count = (dot_count + 1) % (frames_length * 4);
+
+            thread::sleep(Duration::from_millis(self.frame_duration));
+
             if let Ok(spin_message) = self.channel.try_receive() {
                 match spin_message {
                     SpinnerMessage::Stop => {
@@ -76,12 +100,17 @@ impl SpinnerState {
                     }
                     SpinnerMessage::Update(result) => match result {
                         Ok(UpdateMessage::Message(mesage)) => {
-                            let (text, dot_count) = trim_trailing_dots(mesage);
+                            let (text, dots) = trim_trailing_dots(mesage);
                             self.text = text;
-                            self.dot_count = dot_count;
+                            self.dots = dots;
+                            dot_count = 0;
                         }
                         Ok(UpdateMessage::Style(spinner_style)) => {
                             self.spinner_style = spinner_style;
+                            let data = get_spinner_data(&self.spinner_style);
+                            self.frames = data.frames;
+                            self.frame_duration = data.frame_duration;
+                            current_index = 0;
                         }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },
@@ -90,24 +119,31 @@ impl SpinnerState {
         }
         Ok(())
     }
+
+    fn print_frame(&self, frame: &str, dots: &str) -> SpinnerResult<()> {
+        let output_str = format!("{}  {}{}", frame, self.text, dots);
+        let mut w = self.output.lock().unwrap();
+        write!(w, "\r{}\x1B[K", output_str).map_err(|e| SpinnerError::new(&e.to_string()))?;
+        w.flush().map_err(|e| SpinnerError::new(&e.to_string()))
+    }
 }
 
-fn trim_trailing_dots(message: impl Into<String>) -> (String, usize) {
+fn trim_trailing_dots(message: impl Into<String>) -> (String, String) {
     let mut text = String::new();
+    let mut message_dots = String::new();
 
-    let mut dot_count = 0;
     let mut found_non_dot = false;
 
     for c in message.into().chars().rev() {
         if c == '.' && !found_non_dot {
-            dot_count += 1;
+            message_dots.push('.')
         } else {
             found_non_dot = true;
             text.insert(0, c);
         }
     }
 
-    (text, dot_count)
+    (text, message_dots)
 }
 
 #[cfg(test)]
@@ -122,7 +158,7 @@ mod tests {
         let spinner_state = SpinnerState::new("Loading ...");
 
         // Ensure the initial dot count is correct
-        assert_eq!(spinner_state.dot_count, 3);
+        assert_eq!(spinner_state.dots.len(), 3);
 
         // Ensure the initial text is correct
         assert_eq!(spinner_state.text, "Loading ");
@@ -184,7 +220,7 @@ mod tests {
     #[test]
     fn test_trim_trailing_dots_mixed_text_and_dots() {
         let input = String::from("Hello... World....");
-        let expected = (String::from("Hello... World"), 4);
+        let expected = (String::from("Hello... World"), String::from("...."));
         let result = trim_trailing_dots(input);
         assert_eq!(result, expected);
     }
