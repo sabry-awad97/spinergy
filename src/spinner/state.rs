@@ -4,6 +4,7 @@ use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use colored::*;
 use unicode_width::UnicodeWidthStr;
 
 use super::alignment::Alignment;
@@ -22,6 +23,8 @@ pub struct SpinnerState {
     frame_duration: u64,
     reverse: Arc<AtomicBool>,
     alignment: Alignment,
+    style_color: Option<Color>,
+    dot_color: Option<Color>,
 }
 
 impl SpinnerState {
@@ -40,6 +43,9 @@ impl SpinnerState {
 
         let reverse = Arc::new(AtomicBool::new(false));
         let alignment = Alignment::default();
+
+        let style_color = Some(Color::Magenta);
+        let dot_color = Some(Color::Magenta);
         Self {
             channel,
             output,
@@ -50,6 +56,8 @@ impl SpinnerState {
             frame_duration,
             reverse,
             alignment,
+            style_color,
+            dot_color,
         }
     }
 
@@ -102,7 +110,18 @@ impl SpinnerState {
                 frame.width() + self.text.width() + self.dots.width(),
             );
 
-            self.print_frame(&padding_str, &frame, &dots)?;
+            let (colored_dots, colored_frame) = (
+                match self.dot_color.clone() {
+                    Some(color) => format!("{}", dots.color(color)),
+                    None => dots.to_owned(),
+                },
+                match self.style_color.clone() {
+                    Some(color) => format!("{}", frame.color(color)),
+                    None => frame.to_owned(),
+                },
+            );
+
+            self.print_frame(&padding_str, &colored_frame, &colored_dots)?;
 
             current_index = match self.reverse.load(Ordering::SeqCst) {
                 true => (current_index + frames_length - 1) % frames_length,
@@ -138,6 +157,10 @@ impl SpinnerState {
                         Ok(UpdateMessage::Alignment(alignment)) => {
                             self.alignment = alignment;
                         }
+                        Ok(UpdateMessage::Colors(style_color, dot_color)) => {
+                            self.style_color = style_color;
+                            self.dot_color = dot_color;
+                        }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },
                 }
@@ -147,9 +170,10 @@ impl SpinnerState {
     }
 
     fn print_frame(&self, padding_str: &str, frame: &str, dots: &str) -> SpinnerResult<()> {
+        let clear_line = "\r\x1B[K";
         let output_str = format!("{}{} {}{}", padding_str, frame, self.text, dots);
         let mut w = self.output.lock().unwrap();
-        write!(w, "\r{}\x1B[K", output_str).map_err(|e| SpinnerError::new(&e.to_string()))?;
+        write!(w, "{}{}", clear_line, output_str).map_err(|e| SpinnerError::new(&e.to_string()))?;
         w.flush().map_err(|e| SpinnerError::new(&e.to_string()))
     }
 }

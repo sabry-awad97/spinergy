@@ -1,3 +1,5 @@
+use colored::Color;
+
 use crate::SpinnerResult;
 
 use super::{alignment::Alignment, builtins::SpinnerStyle};
@@ -13,4 +15,5 @@ pub enum UpdateMessage {
     Message(String),
     Style(SpinnerStyle),
     Alignment(Alignment),
+    Colors(Option<Color>, Option<Color>),
 }

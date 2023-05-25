@@ -1,3 +1,5 @@
+use colored::Color;
+
 use self::{
     alignment::Alignment, builtins::SpinnerStyle, message::UpdateMessage, state::SpinnerState,
 };
@@ -99,6 +101,14 @@ impl Spinner {
 
     pub fn set_style(&mut self, style: impl Into<SpinnerStyle>) -> SpinnerResult<()> {
         self.state.update(UpdateMessage::Style(style.into()))
+    }
+
+    pub fn set_color_scheme<U>(&mut self, style_color: U, dots_color: U) -> SpinnerResult<()>
+    where
+        U: Into<Option<Color>>,
+    {
+        self.state
+            .update(UpdateMessage::Colors(style_color.into(), dots_color.into()))
     }
 
     pub fn set_reverse(&mut self, reverse: bool) -> SpinnerResult<()> {
