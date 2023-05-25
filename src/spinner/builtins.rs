@@ -95,6 +95,12 @@ pub enum SpinnerStyle {
     Weather,
 }
 
+impl Default for SpinnerStyle {
+    fn default() -> Self {
+        Self::CircleHalves
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +138,11 @@ mod tests {
         let style = SpinnerStyle::CircleHalves;
         let serialized = serde_json::to_string(&style).unwrap();
         assert_eq!(serialized, r#""CircleHalves""#);
+    }
+
+    #[test]
+    fn test_default_spinner_style() {
+        let default_style = SpinnerStyle::default();
+        assert_eq!(default_style, SpinnerStyle::CircleHalves);
     }
 }
