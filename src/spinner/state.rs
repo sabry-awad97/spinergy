@@ -1,17 +1,24 @@
+use std::io::Write;
+use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
 
 use super::{channel::Channel, message::UpdateMessage};
-use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult};
+use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult, SpinnerStream};
 
 #[derive(Clone)]
 pub struct SpinnerState {
     pub channel: Channel<SpinnerMessage>,
+    pub output: Arc<Mutex<SpinnerStream>>,
 }
 
 impl SpinnerState {
     pub fn new() -> Self {
         let channel = Channel::new();
-        Self { channel }
+
+        let stream = SpinnerStream::default();
+        let output = Arc::new(Mutex::new(stream));
+
+        Self { channel, output }
     }
 
     pub fn update(&mut self, message: UpdateMessage) -> SpinnerResult<()> {
@@ -25,6 +32,20 @@ impl SpinnerState {
         running: Arc<AtomicBool>,
         paused: Arc<(Mutex<bool>, Condvar)>,
     ) -> SpinnerResult<()> {
+        write!(self.output.lock().unwrap(), "\x1B[?25l")
+            .map_err(|e| SpinnerError::new(&e.to_string()))?; // hide cursor
+
+        loop {
+            if !running.load(Ordering::SeqCst) {
+                break;
+            }
+
+            let (lock, cvar) = &*paused;
+            let mut paused = lock.lock().unwrap();
+            while *paused {
+                paused = cvar.wait(paused).unwrap();
+            }
+        }
         Ok(())
     }
 }
@@ -44,5 +65,13 @@ mod tests {
         if let SpinnerMessage::Update(Ok(received_update)) = received_message {
             assert!(matches!(received_update, UpdateMessage::Text(_)))
         }
+    }
+
+    #[test]
+    fn test_spin() {
+        let mut state = SpinnerState::new();
+        let running = Arc::new(AtomicBool::new(true));
+        let paused = Arc::new((Mutex::new(false), Condvar::new()));
+        assert!(state.spin(running.clone(), paused.clone()).is_ok());
     }
 }
