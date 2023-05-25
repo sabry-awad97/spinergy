@@ -14,13 +14,13 @@ pub struct SpinnerState {
 }
 
 impl SpinnerState {
-    pub fn new() -> Self {
+    pub fn new(message: impl Into<String>) -> Self {
         let channel = Channel::new();
 
         let stream = SpinnerStream::default();
         let output = Arc::new(Mutex::new(stream));
 
-        let (text, dot_count) = trim_trailing_dots("Loading ...");
+        let (text, dot_count) = trim_trailing_dots(message);
 
         Self {
             channel,
@@ -111,10 +111,10 @@ mod tests {
 
     #[test]
     fn test_spinner_state_new() {
-        let spinner_state = SpinnerState::new();
+        let spinner_state = SpinnerState::new("Loading ...");
 
         // Ensure the initial dot count is correct
-        assert_eq!(spinner_state.dot_count, 0);
+        assert_eq!(spinner_state.dot_count, 3);
 
         // Ensure the initial text is correct
         assert_eq!(spinner_state.text, "Loading ");
@@ -127,20 +127,28 @@ mod tests {
     }
 
     #[test]
-    fn test_update() {
-        let mut state = SpinnerState::new();
-        let message = UpdateMessage::Message("test".to_owned());
-        state.update(message.clone()).unwrap();
-        let received_message = state.channel.try_receive().unwrap();
-        assert!(matches!(received_message, SpinnerMessage::Update(Ok(_))));
-        if let SpinnerMessage::Update(Ok(received_update)) = received_message {
-            assert!(matches!(received_update, UpdateMessage::Message(_)))
+    fn test_spinner_state_update() {
+        let mut state = SpinnerState::new("Loading ...");
+        // Send an update message
+        let update_message = UpdateMessage::Message("Updating...".to_string());
+        state.update(update_message).unwrap();
+        // Receive the update message
+        let spin_message = state.channel.try_receive().unwrap();
+        if let SpinnerMessage::Update(result) = spin_message {
+            if let Ok(UpdateMessage::Message(message)) = result {
+                // Ensure the received message matches the sent message
+                assert_eq!(message, "Updating...");
+            } else {
+                panic!("Expected an UpdateMessage::Message");
+            }
+        } else {
+            panic!("Expected a SpinnerMessage::Update");
         }
     }
 
     #[test]
     fn test_spinner_state_stop() {
-        let spinner_state = SpinnerState::new();
+        let spinner_state = SpinnerState::new("Loading ...");
 
         // Send a stop message
         spinner_state.stop().unwrap();
@@ -154,7 +162,7 @@ mod tests {
     fn test_spin_thread() {
         let running = Arc::new(AtomicBool::new(true));
         let paused = Arc::new((Mutex::new(false), Condvar::new()));
-        let mut state = SpinnerState::new();
+        let mut state = SpinnerState::new("Loading ...");
         let running_clone = running.clone();
         let paused_clone = paused.clone();
         let spinner_thread = thread::spawn(move || {

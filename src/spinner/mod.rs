@@ -23,11 +23,11 @@ pub struct Spinner {
 }
 
 impl Spinner {
-    pub fn new() -> Self {
+    pub fn new(message: impl Into<String>) -> Self {
         let running = Arc::new(AtomicBool::new(false));
         let paused = Arc::new((Mutex::new(false), Condvar::new()));
 
-        let state = SpinnerState::new();
+        let state = SpinnerState::new(message);
         Self {
             running,
             state,
@@ -110,14 +110,14 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let spinner = Spinner::new();
+        let spinner = Spinner::new("Loading ...");
         assert_eq!(spinner.is_running(), false);
         assert_eq!(*spinner.paused.0.lock().unwrap(), false);
     }
 
     #[test]
     fn test_start_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         let result = spinner.start();
         assert_eq!(result.is_ok(), true);
         assert_eq!(spinner.is_running(), true);
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_start_running_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         spinner.running.store(true, Ordering::SeqCst);
         let result = spinner.start();
         assert_eq!(result.is_err(), true);
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_stop_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
         let result = spinner.stop();
         assert_eq!(result.is_ok(), true);
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_stop_stopped_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         let result = spinner.stop();
         assert_eq!(result.is_err(), true);
         assert_eq!(spinner.is_running(), false);
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_start_stop() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert_eq!(spinner.start().is_ok(), true);
         assert_eq!(spinner.running.load(Ordering::SeqCst), true);
         assert_eq!(spinner.start().is_err(), true);
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_start_multiple_times() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert!(!spinner.is_running());
 
         spinner.start().unwrap();
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_stop_multiple_times() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert!(!spinner.is_running());
 
         let result = spinner.stop();
@@ -206,14 +206,14 @@ mod tests {
 
     #[test]
     fn test_pause_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
         assert_eq!(spinner.pause().is_ok(), true);
     }
 
     #[test]
     fn test_pause_paused_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
         spinner.pause().unwrap();
         assert_eq!(spinner.pause().is_err(), true);
@@ -221,13 +221,13 @@ mod tests {
 
     #[test]
     fn test_pause_stopped_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert_eq!(spinner.pause().is_err(), true);
     }
 
     #[test]
     fn test_resume_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
         spinner.pause().unwrap();
         assert_eq!(spinner.resume().is_ok(), true);
@@ -235,26 +235,26 @@ mod tests {
 
     #[test]
     fn test_resume_running_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
         assert_eq!(spinner.resume().is_err(), true);
     }
     #[test]
     fn test_resume_unpaused_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
         assert_eq!(spinner.resume().is_err(), true);
     }
 
     #[test]
     fn test_resume_stopped_spinner() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert_eq!(spinner.resume().is_err(), true);
     }
 
     #[test]
     fn test_pause_resume_multiple_times() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert!(spinner.start().is_ok());
         assert!(spinner.pause().is_ok());
         assert!(spinner.resume().is_ok());
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_resume_while_not_paused() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert!(spinner.start().is_ok());
         assert!(spinner.resume().is_err());
         assert!(spinner.stop().is_ok());
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_drop() {
-        let mut spinner = Spinner::new();
+        let mut spinner = Spinner::new("Loading ...");
         assert!(spinner.start().is_ok());
         drop(spinner);
     }
