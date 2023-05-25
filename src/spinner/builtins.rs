@@ -124,6 +124,10 @@ lazy_static! {
     };
 }
 
+pub fn get_spinner_data(name: &SpinnerStyle) -> SpinnerData {
+    SPINNER_COLLECTION.get(name).cloned().unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use strum::IntoEnumIterator;
@@ -217,5 +221,15 @@ mod tests {
     fn test_spinner_style_conversion_invalid() {
         let key = r#"InvalidStyle"#;
         let _: SpinnerStyle = key.into();
+    }
+
+    #[test]
+    fn test_get_spinner_data_existing_spinner() {
+        let spinner_name = SpinnerStyle::CircleHalves;
+        let spinner_data = get_spinner_data(&spinner_name);
+
+        // Ensure the returned spinner data matches the expected data
+        assert_eq!(spinner_data.frames, ["◐", "◓", "◑", "◒"]);
+        assert_eq!(spinner_data.frame_duration, 50);
     }
 }
