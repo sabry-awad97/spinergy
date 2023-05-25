@@ -67,6 +67,8 @@ impl SpinnerState {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+
     use super::*;
     use crate::spinner::message::SpinnerMessage;
 
@@ -83,10 +85,17 @@ mod tests {
     }
 
     #[test]
-    fn test_spin() {
-        let mut state = SpinnerState::new();
+    fn test_spin_thread() {
         let running = Arc::new(AtomicBool::new(true));
         let paused = Arc::new((Mutex::new(false), Condvar::new()));
-        assert!(state.spin(running.clone(), paused.clone()).is_ok());
+        let mut state = SpinnerState::new();
+        let running_clone = running.clone();
+        let paused_clone = paused.clone();
+        let spinner_thread = thread::spawn(move || {
+            let result = state.spin(running_clone, paused_clone);
+            assert!(result.is_ok());
+        });
+        running.store(false, Ordering::SeqCst);
+        spinner_thread.join().unwrap();
     }
 }
