@@ -98,6 +98,13 @@ pub enum SpinnerStyle {
     Weather,
 }
 
+impl<'a> Into<SpinnerStyle> for &'a str {
+    fn into(self) -> SpinnerStyle {
+        let style = SpinnerStyle::deserialize(&serde_json::to_value(self).unwrap());
+        style.expect(&format!("Unsupported spinner style: {}", self))
+    }
+}
+
 impl Default for SpinnerStyle {
     fn default() -> Self {
         Self::CircleHalves
@@ -197,5 +204,18 @@ mod tests {
             let deserialized: SpinnerData = serde_json::from_str(&serialized).unwrap();
             assert_eq!(deserialized, *spinner_data);
         }
+    }
+
+    #[test]
+    fn test_spinner_style_conversion() {
+        let spinner_style: SpinnerStyle = "CircleHalves".into();
+        assert_eq!(spinner_style, SpinnerStyle::default());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_spinner_style_conversion_invalid() {
+        let key = r#"InvalidStyle"#;
+        let _: SpinnerStyle = key.into();
     }
 }
