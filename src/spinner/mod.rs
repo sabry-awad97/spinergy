@@ -1,4 +1,7 @@
-use self::{message::SpinnerMessage, state::SpinnerState};
+use self::{
+    message::{SpinnerMessage, UpdateMessage},
+    state::SpinnerState,
+};
 use crate::{SpinnerError, SpinnerResult};
 use std::{
     sync::{
@@ -89,6 +92,13 @@ impl Spinner {
 
     pub fn is_running(&self) -> bool {
         self.running.load(Ordering::SeqCst)
+    }
+
+    pub fn set_message<T>(&mut self, message: T) -> SpinnerResult<()>
+    where
+        T: Into<String>,
+    {
+        self.state.update(UpdateMessage::Text(message.into()))
     }
 }
 

@@ -24,7 +24,7 @@ impl SpinnerState {
     pub fn update(&mut self, message: UpdateMessage) -> SpinnerResult<()> {
         self.channel
             .try_send(SpinnerMessage::Update(Ok(message)))
-            .map_err(|_| SpinnerError::new("Failed to send message through channel"))
+            .map_err(|_| "Failed to send message through channel".into())
     }
 
     pub fn spin(
@@ -44,6 +44,21 @@ impl SpinnerState {
             let mut paused = lock.lock().unwrap();
             while *paused {
                 paused = cvar.wait(paused).unwrap();
+            }
+
+            if let Ok(spin_message) = self.channel.try_receive() {
+                match spin_message {
+                    SpinnerMessage::Stop => {
+                        if self.channel.try_send(SpinnerMessage::Stop).is_err() {
+                            return Err("Failed to send message through channel".into());
+                        }
+                        return Err("Spinner stopped".into());
+                    }
+                    SpinnerMessage::Update(result) => match result {
+                        Ok(UpdateMessage::Text(message)) => {}
+                        Err(_) => return Err("Failed to receive update message".into()),
+                    },
+                }
             }
         }
         Ok(())

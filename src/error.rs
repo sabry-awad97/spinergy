@@ -13,6 +13,12 @@ impl SpinnerError {
     }
 }
 
+impl From<&str> for SpinnerError {
+    fn from(error_message: &str) -> Self {
+        SpinnerError::new(error_message)
+    }
+}
+
 impl fmt::Display for SpinnerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
