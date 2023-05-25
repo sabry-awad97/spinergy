@@ -1,4 +1,4 @@
-use self::{message::UpdateMessage, state::SpinnerState};
+use self::{builtins::SpinnerStyle, message::UpdateMessage, state::SpinnerState};
 use crate::{SpinnerError, SpinnerResult};
 use std::{
     sync::{
@@ -93,6 +93,10 @@ impl Spinner {
         T: Into<String>,
     {
         self.state.update(UpdateMessage::Message(message.into()))
+    }
+
+    pub fn set_style(&mut self, style: impl Into<SpinnerStyle>) -> SpinnerResult<()> {
+        self.state.update(UpdateMessage::Style(style.into()))
     }
 }
 

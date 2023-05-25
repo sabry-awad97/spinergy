@@ -2,6 +2,7 @@ use std::io::Write;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
 
+use super::builtins::SpinnerStyle;
 use super::{channel::Channel, message::UpdateMessage};
 use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult, SpinnerStream};
 
@@ -11,6 +12,7 @@ pub struct SpinnerState {
     output: Arc<Mutex<SpinnerStream>>,
     dot_count: usize,
     text: String,
+    spinner_style: SpinnerStyle,
 }
 
 impl SpinnerState {
@@ -22,11 +24,14 @@ impl SpinnerState {
 
         let (text, dot_count) = trim_trailing_dots(message);
 
+        let spinner_style = SpinnerStyle::default();
+
         Self {
             channel,
             output,
             dot_count,
             text,
+            spinner_style,
         }
     }
 
@@ -74,6 +79,9 @@ impl SpinnerState {
                             let (text, dot_count) = trim_trailing_dots(mesage);
                             self.text = text;
                             self.dot_count = dot_count;
+                        }
+                        Ok(UpdateMessage::Style(spinner_style)) => {
+                            self.spinner_style = spinner_style;
                         }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },

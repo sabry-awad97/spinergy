@@ -1,5 +1,7 @@
 use crate::SpinnerResult;
 
+use super::builtins::SpinnerStyle;
+
 #[derive(Debug, Clone)]
 pub enum SpinnerMessage {
     Stop,
@@ -9,4 +11,5 @@ pub enum SpinnerMessage {
 #[derive(Debug, Clone)]
 pub enum UpdateMessage {
     Message(String),
+    Style(SpinnerStyle),
 }
