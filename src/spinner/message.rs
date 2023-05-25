@@ -8,5 +8,5 @@ pub enum SpinnerMessage {
 
 #[derive(Debug, Clone)]
 pub enum UpdateMessage {
-    Text(String),
+    Message(String),
 }

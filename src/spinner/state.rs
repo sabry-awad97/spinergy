@@ -9,6 +9,8 @@ use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult, Spinn
 pub struct SpinnerState {
     channel: Channel<SpinnerMessage>,
     output: Arc<Mutex<SpinnerStream>>,
+    dot_count: usize,
+    text: String,
 }
 
 impl SpinnerState {
@@ -18,7 +20,14 @@ impl SpinnerState {
         let stream = SpinnerStream::default();
         let output = Arc::new(Mutex::new(stream));
 
-        Self { channel, output }
+        let (text, dot_count) = trim_trailing_dots("Loading ...");
+
+        Self {
+            channel,
+            output,
+            dot_count,
+            text,
+        }
     }
 
     pub fn update(&mut self, message: UpdateMessage) -> SpinnerResult<()> {
@@ -61,7 +70,11 @@ impl SpinnerState {
                         return Err("Spinner stopped".into());
                     }
                     SpinnerMessage::Update(result) => match result {
-                        Ok(UpdateMessage::Text(message)) => {}
+                        Ok(UpdateMessage::Message(mesage)) => {
+                            let (text, dot_count) = trim_trailing_dots(mesage);
+                            self.text = text;
+                            self.dot_count = dot_count;
+                        }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },
                 }
@@ -69,6 +82,24 @@ impl SpinnerState {
         }
         Ok(())
     }
+}
+
+fn trim_trailing_dots(message: impl Into<String>) -> (String, usize) {
+    let mut text = String::new();
+
+    let mut dot_count = 0;
+    let mut found_non_dot = false;
+
+    for c in message.into().chars().rev() {
+        if c == '.' && !found_non_dot {
+            dot_count += 1;
+        } else {
+            found_non_dot = true;
+            text.insert(0, c);
+        }
+    }
+
+    (text, dot_count)
 }
 
 #[cfg(test)]
@@ -81,12 +112,12 @@ mod tests {
     #[test]
     fn test_update() {
         let mut state = SpinnerState::new();
-        let message = UpdateMessage::Text("test".to_owned());
+        let message = UpdateMessage::Message("test".to_owned());
         state.update(message.clone()).unwrap();
         let received_message = state.channel.try_receive().unwrap();
         assert!(matches!(received_message, SpinnerMessage::Update(Ok(_))));
         if let SpinnerMessage::Update(Ok(received_update)) = received_message {
-            assert!(matches!(received_update, UpdateMessage::Text(_)))
+            assert!(matches!(received_update, UpdateMessage::Message(_)))
         }
     }
 
@@ -103,5 +134,13 @@ mod tests {
         });
         running.store(false, Ordering::SeqCst);
         spinner_thread.join().unwrap();
+    }
+
+    #[test]
+    fn test_trim_trailing_dots_mixed_text_and_dots() {
+        let input = String::from("Hello... World....");
+        let expected = (String::from("Hello... World"), 4);
+        let result = trim_trailing_dots(input);
+        assert_eq!(result, expected);
     }
 }

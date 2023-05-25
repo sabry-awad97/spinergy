@@ -92,7 +92,7 @@ impl Spinner {
     where
         T: Into<String>,
     {
-        self.state.update(UpdateMessage::Text(message.into()))
+        self.state.update(UpdateMessage::Message(message.into()))
     }
 }
 
