@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter};
 
@@ -99,6 +102,19 @@ impl Default for SpinnerStyle {
     fn default() -> Self {
         Self::CircleHalves
     }
+}
+
+lazy_static! {
+    pub static ref SPINNER_COLLECTION: HashMap<SpinnerStyle, SpinnerData> = {
+        let frames_str = include_str!("../data/frames.toml");
+        let frames: HashMap<String, SpinnerData> = toml::from_str(frames_str).unwrap();
+        let mut spinners = HashMap::new();
+        for (key, value) in frames {
+            let style = SpinnerStyle::deserialize(&serde_json::to_value(&key).unwrap()).unwrap();
+            spinners.insert(style, value);
+        }
+        spinners
+    };
 }
 
 #[cfg(test)]
