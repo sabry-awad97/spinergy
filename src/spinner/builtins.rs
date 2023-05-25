@@ -119,6 +119,8 @@ lazy_static! {
 
 #[cfg(test)]
 mod tests {
+    use strum::IntoEnumIterator;
+
     use super::*;
 
     #[test]
@@ -160,5 +162,40 @@ mod tests {
     fn test_default_spinner_style() {
         let default_style = SpinnerStyle::default();
         assert_eq!(default_style, SpinnerStyle::CircleHalves);
+    }
+
+    #[test]
+    fn test_spinner_collection_contains_styles() {
+        // Check if all spinner styles are present in the collection
+        for style in SpinnerStyle::iter() {
+            assert!(SPINNER_COLLECTION.contains_key(&style));
+        }
+    }
+
+    #[test]
+    fn test_spinner_collection_frame_duration() {
+        // Check if frame duration is non-zero for all spinner styles
+        for (_, spinner_data) in SPINNER_COLLECTION.iter() {
+            assert_ne!(spinner_data.frame_duration, 0);
+        }
+    }
+
+    #[test]
+    fn test_spinner_collection_frame_count() {
+        // Check if each spinner style has at least one frame
+        for (_, spinner_data) in SPINNER_COLLECTION.iter() {
+            assert!(!spinner_data.frames.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_spinner_collection_deserialization() {
+        // Check if deserialization of all spinner styles is successful
+        for style in SpinnerStyle::iter() {
+            let spinner_data = &SPINNER_COLLECTION[&style];
+            let serialized = serde_json::to_string(spinner_data).unwrap();
+            let deserialized: SpinnerData = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(deserialized, *spinner_data);
+        }
     }
 }
