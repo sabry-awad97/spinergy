@@ -1,6 +1,6 @@
 use crate::SpinnerResult;
 
-use super::builtins::SpinnerStyle;
+use super::{alignment::Alignment, builtins::SpinnerStyle};
 
 #[derive(Debug, Clone)]
 pub enum SpinnerMessage {
@@ -12,4 +12,5 @@ pub enum SpinnerMessage {
 pub enum UpdateMessage {
     Message(String),
     Style(SpinnerStyle),
+    Alignment(Alignment),
 }

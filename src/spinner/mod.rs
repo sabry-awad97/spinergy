@@ -1,4 +1,6 @@
-use self::{builtins::SpinnerStyle, message::UpdateMessage, state::SpinnerState};
+use self::{
+    alignment::Alignment, builtins::SpinnerStyle, message::UpdateMessage, state::SpinnerState,
+};
 use crate::{SpinnerError, SpinnerResult};
 use std::{
     sync::{
@@ -102,6 +104,14 @@ impl Spinner {
     pub fn set_reverse(&mut self, reverse: bool) -> SpinnerResult<()> {
         self.state.set_reverse(reverse);
         Ok(())
+    }
+
+    pub fn set_alignment<T>(&mut self, alignment: T) -> SpinnerResult<()>
+    where
+        T: Into<Alignment>,
+    {
+        self.state
+            .update(UpdateMessage::Alignment(alignment.into()))
     }
 }
 

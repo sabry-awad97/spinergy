@@ -4,6 +4,9 @@ use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use unicode_width::UnicodeWidthStr;
+
+use super::alignment::Alignment;
 use super::builtins::{get_spinner_data, SpinnerStyle};
 use super::{channel::Channel, message::UpdateMessage};
 use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult, SpinnerStream};
@@ -18,6 +21,7 @@ pub struct SpinnerState {
     frames: Vec<String>,
     frame_duration: u64,
     reverse: Arc<AtomicBool>,
+    alignment: Alignment,
 }
 
 impl SpinnerState {
@@ -35,7 +39,7 @@ impl SpinnerState {
         let frame_duration = data.frame_duration;
 
         let reverse = Arc::new(AtomicBool::new(false));
-
+        let alignment = Alignment::default();
         Self {
             channel,
             output,
@@ -44,7 +48,8 @@ impl SpinnerState {
             spinner_style,
             frames,
             frame_duration,
-            reverse
+            reverse,
+            alignment,
         }
     }
 
@@ -91,7 +96,13 @@ impl SpinnerState {
             let frame = &frames[current_index % frames_length];
             let dots = ".".repeat(dot_count.min(self.dots.len()));
 
-            self.print_frame(&frame, &dots)?;
+            let (width, _) = get_terminal_size();
+            let padding_str = self.alignment.get_horizontal_padding(
+                width - 2,
+                frame.width() + self.text.width() + self.dots.width(),
+            );
+
+            self.print_frame(&padding_str, &frame, &dots)?;
 
             current_index = match self.reverse.load(Ordering::SeqCst) {
                 true => (current_index + frames_length - 1) % frames_length,
@@ -124,6 +135,9 @@ impl SpinnerState {
                             self.frame_duration = data.frame_duration;
                             current_index = 0;
                         }
+                        Ok(UpdateMessage::Alignment(alignment)) => {
+                            self.alignment = alignment;
+                        }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },
                 }
@@ -132,8 +146,8 @@ impl SpinnerState {
         Ok(())
     }
 
-    fn print_frame(&self, frame: &str, dots: &str) -> SpinnerResult<()> {
-        let output_str = format!("{}  {}{}", frame, self.text, dots);
+    fn print_frame(&self, padding_str: &str, frame: &str, dots: &str) -> SpinnerResult<()> {
+        let output_str = format!("{}{} {}{}", padding_str, frame, self.text, dots);
         let mut w = self.output.lock().unwrap();
         write!(w, "\r{}\x1B[K", output_str).map_err(|e| SpinnerError::new(&e.to_string()))?;
         w.flush().map_err(|e| SpinnerError::new(&e.to_string()))
@@ -156,6 +170,10 @@ fn trim_trailing_dots(message: impl Into<String>) -> (String, String) {
     }
 
     (text, message_dots)
+}
+
+fn get_terminal_size() -> (usize, usize) {
+    term_size::dimensions().unwrap_or((80, 24))
 }
 
 #[cfg(test)]
@@ -235,5 +253,12 @@ mod tests {
         let expected = (String::from("Hello... World"), String::from("...."));
         let result = trim_trailing_dots(input);
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_get_terminal_size() {
+        let (width, height) = get_terminal_size();
+        assert!(width > 0);
+        assert!(height > 0);
     }
 }
