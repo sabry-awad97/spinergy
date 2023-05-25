@@ -98,6 +98,11 @@ impl Spinner {
     pub fn set_style(&mut self, style: impl Into<SpinnerStyle>) -> SpinnerResult<()> {
         self.state.update(UpdateMessage::Style(style.into()))
     }
+
+    pub fn set_reverse(&mut self, reverse: bool) -> SpinnerResult<()> {
+        self.state.set_reverse(reverse);
+        Ok(())
+    }
 }
 
 impl Drop for Spinner {

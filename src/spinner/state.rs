@@ -17,6 +17,7 @@ pub struct SpinnerState {
     spinner_style: SpinnerStyle,
     frames: Vec<String>,
     frame_duration: u64,
+    reverse: Arc<AtomicBool>,
 }
 
 impl SpinnerState {
@@ -33,6 +34,8 @@ impl SpinnerState {
         let frames = data.frames;
         let frame_duration = data.frame_duration;
 
+        let reverse = Arc::new(AtomicBool::new(false));
+
         Self {
             channel,
             output,
@@ -41,6 +44,7 @@ impl SpinnerState {
             spinner_style,
             frames,
             frame_duration,
+            reverse
         }
     }
 
@@ -54,6 +58,10 @@ impl SpinnerState {
         self.channel
             .try_send(SpinnerMessage::Stop)
             .map_err(|_| "Failed to send stop message through channel".into())
+    }
+
+    pub fn set_reverse(&mut self, reverse: bool) {
+        self.reverse.store(reverse, Ordering::SeqCst);
     }
 
     pub fn spin(
@@ -85,7 +93,11 @@ impl SpinnerState {
 
             self.print_frame(&frame, &dots)?;
 
-            current_index = (current_index + 1) % frames_length;
+            current_index = match self.reverse.load(Ordering::SeqCst) {
+                true => (current_index + frames_length - 1) % frames_length,
+                false => (current_index + 1) % frames_length,
+            };
+
             dot_count = (dot_count + 1) % (frames_length * 4);
 
             thread::sleep(Duration::from_millis(self.frame_duration));
