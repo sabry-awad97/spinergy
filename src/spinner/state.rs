@@ -110,6 +110,23 @@ mod tests {
     use crate::spinner::message::SpinnerMessage;
 
     #[test]
+    fn test_spinner_state_new() {
+        let spinner_state = SpinnerState::new();
+
+        // Ensure the initial dot count is correct
+        assert_eq!(spinner_state.dot_count, 0);
+
+        // Ensure the initial text is correct
+        assert_eq!(spinner_state.text, "Loading ");
+
+        // Ensure the output stream is initialized
+        assert!(matches!(
+            *spinner_state.output.lock().unwrap(),
+            SpinnerStream::Stdout
+        ))
+    }
+
+    #[test]
     fn test_update() {
         let mut state = SpinnerState::new();
         let message = UpdateMessage::Message("test".to_owned());
@@ -119,6 +136,18 @@ mod tests {
         if let SpinnerMessage::Update(Ok(received_update)) = received_message {
             assert!(matches!(received_update, UpdateMessage::Message(_)))
         }
+    }
+
+    #[test]
+    fn test_spinner_state_stop() {
+        let spinner_state = SpinnerState::new();
+
+        // Send a stop message
+        spinner_state.stop().unwrap();
+
+        // Receive the stop message
+        let spin_message = spinner_state.channel.try_receive().unwrap();
+        assert!(matches!(spin_message, SpinnerMessage::Stop))
     }
 
     #[test]
