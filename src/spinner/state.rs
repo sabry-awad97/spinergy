@@ -7,8 +7,8 @@ use crate::{spinner::message::SpinnerMessage, SpinnerError, SpinnerResult, Spinn
 
 #[derive(Clone)]
 pub struct SpinnerState {
-    pub channel: Channel<SpinnerMessage>,
-    pub output: Arc<Mutex<SpinnerStream>>,
+    channel: Channel<SpinnerMessage>,
+    output: Arc<Mutex<SpinnerStream>>,
 }
 
 impl SpinnerState {
@@ -25,6 +25,12 @@ impl SpinnerState {
         self.channel
             .try_send(SpinnerMessage::Update(Ok(message)))
             .map_err(|_| "Failed to send message through channel".into())
+    }
+
+    pub fn stop(&self) -> SpinnerResult<()> {
+        self.channel
+            .try_send(SpinnerMessage::Stop)
+            .map_err(|_| "Failed to send stop message through channel".into())
     }
 
     pub fn spin(

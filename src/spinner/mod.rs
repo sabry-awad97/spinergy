@@ -1,7 +1,4 @@
-use self::{
-    message::{SpinnerMessage, UpdateMessage},
-    state::SpinnerState,
-};
+use self::{message::UpdateMessage, state::SpinnerState};
 use crate::{SpinnerError, SpinnerResult};
 use std::{
     sync::{
@@ -54,10 +51,7 @@ impl Spinner {
         if !self.is_running() {
             return Err(SpinnerError::new("Spinner is not running"));
         }
-        self.state
-            .channel
-            .try_send(SpinnerMessage::Stop)
-            .map_err(|_| SpinnerError::new("Failed to send message through channel"))?;
+        self.state.stop()?;
         self.running.store(false, Ordering::SeqCst);
         Ok(())
     }
