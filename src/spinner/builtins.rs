@@ -94,3 +94,43 @@ pub enum SpinnerStyle {
     Triangle,
     Weather,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_spinner_style_equality() {
+        assert_eq!(SpinnerStyle::CircleHalves, SpinnerStyle::CircleHalves);
+        // Add more equality assertions for other spinner styles
+    }
+
+    #[test]
+    fn test_spinner_style_display() {
+        assert_eq!(SpinnerStyle::CircleHalves.to_string(), "CircleHalves");
+        // Add more assertions for other spinner styles' display names
+    }
+
+    #[test]
+    fn test_spinner_style_clone() {
+        let style = SpinnerStyle::Dots;
+        let cloned_style = style.clone();
+        assert_eq!(style, cloned_style);
+    }
+
+    #[test]
+    fn test_spinner_style_deserialize() {
+        // Simulating deserialization from JSON or other formats
+        let json = r#""CircleHalves""#;
+        let deserialized: SpinnerStyle = serde_json::from_str(json).unwrap();
+        assert_eq!(deserialized, SpinnerStyle::CircleHalves);
+    }
+
+    #[test]
+    fn test_spinner_style_serialize() {
+        // Simulating serialization to JSON or other formats
+        let style = SpinnerStyle::CircleHalves;
+        let serialized = serde_json::to_string(&style).unwrap();
+        assert_eq!(serialized, r#""CircleHalves""#);
+    }
+}
