@@ -6,6 +6,16 @@ pub enum SpinnerStream {
     Stderr,
 }
 
+impl<'a> Into<SpinnerStream> for &'a str {
+    fn into(self) -> SpinnerStream {
+        match self {
+            "stdout" => SpinnerStream::Stdout,
+            "stderr" => SpinnerStream::Stderr,
+            _ => panic!("Invalid spinner stream"),
+        }
+    }
+}
+
 impl Default for SpinnerStream {
     fn default() -> Self {
         Self::Stdout
@@ -62,5 +72,21 @@ mod tests {
     fn test_spinner_stream_flush_stderr() {
         let mut stream = SpinnerStream::Stderr;
         assert!(stream.flush().is_ok());
+    }
+
+    #[test]
+    fn test_str_into_spinner_stream_valid() {
+        let stdout: SpinnerStream = "stdout".into();
+        assert!(matches!(stdout, SpinnerStream::Stdout));
+
+        let stderr: SpinnerStream = "stderr".into();
+        assert!(matches!(stderr, SpinnerStream::Stderr));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_str_into_spinner_stream_invalid() {
+        // Test an invalid stream, expecting a panic
+        let _ = Into::<SpinnerStream>::into("invalid");
     }
 }
