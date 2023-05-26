@@ -28,6 +28,8 @@ pub struct Spinner {
     paused: Arc<(Mutex<bool>, Condvar)>,
     state: SpinnerState,
     start_time: Option<Instant>,
+    pause_start_time: Option<Instant>,
+    pause_elapsed: Duration,
 }
 
 impl Spinner {
@@ -40,6 +42,8 @@ impl Spinner {
         let emitter = EventEmitter::new();
 
         let start_time = None;
+        let pause_start_time = None;
+        let pause_elapsed = Duration::from_secs(0);
 
         Self {
             emitter,
@@ -47,6 +51,8 @@ impl Spinner {
             state,
             paused,
             start_time,
+            pause_start_time,
+            pause_elapsed,
         }
     }
 
@@ -115,6 +121,7 @@ impl Spinner {
         *paused = true;
         cvar.notify_one();
 
+        self.pause_start_time = Some(Instant::now());
         self.emitter
             .emit(&Event::Pause.to_string(), &[Box::new(self.start_time)]);
         Ok(())
@@ -146,7 +153,31 @@ impl Spinner {
         }
         *paused = false;
         cvar.notify_one();
+
+        if let Some(pause_elapsed) = self.pause_start_time {
+            self.pause_elapsed += pause_elapsed.elapsed();
+        }
+
+        self.pause_start_time = None;
+
+        self.emitter
+            .emit(&Event::Resume.to_string(), &[Box::new(self.pause_elapsed)]);
         Ok(())
+    }
+
+    pub fn on_resume<F>(&mut self, mut listener: F)
+    where
+        F: FnMut(Duration) + Sync + Send + 'static,
+    {
+        let callback = move |args: &[Box<dyn std::any::Any>]| {
+            if let Some(arg) = args.first() {
+                if let Some(duration) = arg.downcast_ref::<Duration>() {
+                    listener(*duration);
+                }
+            }
+        };
+
+        self.emitter.on(&Event::Resume.to_string(), callback);
     }
 
     pub fn is_running(&self) -> bool {
