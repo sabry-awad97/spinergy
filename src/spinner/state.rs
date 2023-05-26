@@ -265,11 +265,12 @@ mod tests {
     }
 
     #[test]
-    fn test_spinner_state_update() {
+    fn test_update_spinner_state_with_message() {
         let mut state = SpinnerState::new("Loading ...");
         // Send an update message
         let update_message = UpdateMessage::Message("Updating...".to_string());
-        state.update(update_message).unwrap();
+        let result = state.update(update_message);
+        assert!(result.is_ok());
         // Receive the update message
         let spin_message = state.channel.try_receive().unwrap();
         if let SpinnerMessage::Update(result) = spin_message {
