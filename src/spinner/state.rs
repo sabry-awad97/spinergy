@@ -96,13 +96,14 @@ impl SpinnerState {
         let mut dot_count = self.dots.len();
         let mut current_index = 0;
 
+        let (lock, cvar) = &*paused;
+        let mut paused = lock.lock().unwrap();
+
         loop {
             if !running.load(Ordering::SeqCst) {
                 break;
             }
 
-            let (lock, cvar) = &*paused;
-            let mut paused = lock.lock().unwrap();
             while *paused {
                 paused = cvar.wait(paused).unwrap();
             }
@@ -191,17 +192,17 @@ impl SpinnerState {
         );
 
         let colored_frame = match self.style_color {
-            Some(color) => format!("{}", frame.color(color)),
+            Some(color) => frame.color(color).to_string(),
             None => frame.to_owned(),
         };
 
         let colored_text = match self.text_color {
-            Some(color) => format!("{}", text.color(color)),
+            Some(color) => text.color(color).to_string(),
             None => text.to_owned(),
         };
 
         let colored_dots = match self.dot_color {
-            Some(color) => format!("{}", dots.color(color)),
+            Some(color) => dots.color(color).to_string(),
             None => dots.to_owned(),
         };
 
