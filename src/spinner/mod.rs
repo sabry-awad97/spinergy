@@ -146,8 +146,11 @@ impl Spinner {
         cvar.notify_one();
 
         self.pause_start_time = Some(Instant::now());
+
+        let elapsed = self.start_time.map(|start_time| start_time.elapsed());
+
         self.emitter
-            .emit(&Event::Pause.to_string(), &[Box::new(self.start_time)]);
+            .emit(&Event::Pause.to_string(), &[Box::new(elapsed)]);
         Ok(())
     }
 
@@ -449,6 +452,24 @@ mod tests {
         assert_eq!(spinner.pause().is_ok(), true);
     }
 
+    #[test]
+    fn test_on_pause_listener() {
+        let mut spinner = Spinner::new("Loading ...");
+        let listener_called = Arc::new(AtomicBool::new(false));
+        let listener_called_clone = listener_called.clone();
+        let listener = move |duration: Option<Duration>| {
+            println!("duration: {:?}", duration);
+            listener_called_clone.store(true, Ordering::SeqCst);
+            if let Some(duration) = duration {
+                assert!(duration > Duration::from_secs(0));
+            }
+        };
+        spinner.start().unwrap();
+        spinner.on_pause(listener);
+        spinner.pause().unwrap();
+        assert!(listener_called.load(Ordering::SeqCst));
+    }
+    
     #[test]
     fn test_pause_paused_spinner() {
         let mut spinner = Spinner::new("Loading ...");
