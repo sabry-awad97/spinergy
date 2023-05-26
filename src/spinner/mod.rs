@@ -15,7 +15,7 @@ use std::{
 };
 
 pub mod alignment;
-mod builtins;
+pub mod builtins;
 mod channel;
 pub mod event;
 mod message;
