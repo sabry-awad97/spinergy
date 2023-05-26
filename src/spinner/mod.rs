@@ -2,6 +2,7 @@ use colored::Color;
 
 use self::{
     alignment::Alignment, builtins::SpinnerStyle, message::UpdateMessage, state::SpinnerState,
+    stream::SpinnerStream,
 };
 use crate::{SpinnerError, SpinnerResult};
 use std::{
@@ -145,6 +146,13 @@ impl Spinner {
     {
         let frames: Vec<String> = frames.iter().map(|s| s.as_ref().to_string()).collect();
         self.state.update(UpdateMessage::Frames(frames))
+    }
+
+    pub fn set_output_stream<S>(&mut self, stream: S) -> SpinnerResult<()>
+    where
+        S: Into<SpinnerStream>,
+    {
+        self.state.update(UpdateMessage::Stream(stream.into()))
     }
 }
 

@@ -2,7 +2,7 @@ use colored::Color;
 
 use crate::SpinnerResult;
 
-use super::{alignment::Alignment, builtins::SpinnerStyle};
+use super::{alignment::Alignment, builtins::SpinnerStyle, stream::SpinnerStream};
 
 #[derive(Debug, Clone)]
 pub enum SpinnerMessage {
@@ -19,4 +19,5 @@ pub enum UpdateMessage {
     FramesPerSecond(f64),
     Speed(f64),
     Frames(Vec<String>),
+    Stream(SpinnerStream),
 }

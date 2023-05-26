@@ -185,6 +185,9 @@ impl SpinnerState {
                             current_index = 0;
                             dot_count = 0;
                         }
+                        Ok(UpdateMessage::Stream(output)) => {
+                            self.output = Arc::new(Mutex::new(output));
+                        }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },
                 }
