@@ -138,6 +138,14 @@ impl Spinner {
     {
         self.state.update(UpdateMessage::Speed(rpm.into()))
     }
+
+    pub fn set_frames<S>(&mut self, frames: &[S]) -> SpinnerResult<()>
+    where
+        S: AsRef<str>,
+    {
+        let frames: Vec<String> = frames.iter().map(|s| s.as_ref().to_string()).collect();
+        self.state.update(UpdateMessage::Frames(frames))
+    }
 }
 
 impl Drop for Spinner {

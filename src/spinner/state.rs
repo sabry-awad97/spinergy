@@ -180,6 +180,11 @@ impl SpinnerState {
                                 / self.frames.len() as u32;
                             self.interval = Some(duration);
                         }
+                        Ok(UpdateMessage::Frames(frames)) => {
+                            self.frames = frames;
+                            current_index = 0;
+                            dot_count = 0;
+                        }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },
                 }

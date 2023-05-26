@@ -18,4 +18,5 @@ pub enum UpdateMessage {
     Colors(Option<Color>, Option<Color>),
     FramesPerSecond(f64),
     Speed(f64),
+    Frames(Vec<String>),
 }
