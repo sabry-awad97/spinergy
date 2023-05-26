@@ -502,6 +502,23 @@ mod tests {
     }
 
     #[test]
+    fn test_pause_emits_pause_event_with_elapsed_duration() {
+        let mut spinner = Spinner::new("Loading");
+        let (tx, rx) = unbounded();
+
+        spinner.on_pause(move |elapsed| {
+            tx.send(elapsed).unwrap();
+        });
+
+        spinner.start().unwrap();
+        spinner.pause().unwrap();
+        spinner.resume().unwrap();
+
+        let elapsed = rx.recv().unwrap();
+        assert!(elapsed.unwrap() > Duration::from_secs(0));
+    }
+
+    #[test]
     fn test_pause_paused_spinner() {
         let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
