@@ -11,7 +11,7 @@ use std::{
         Arc, Condvar, Mutex,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 pub mod alignment;
@@ -27,6 +27,7 @@ pub struct Spinner {
     running: Arc<AtomicBool>,
     paused: Arc<(Mutex<bool>, Condvar)>,
     state: SpinnerState,
+    start_time: Option<Instant>,
 }
 
 impl Spinner {
@@ -38,11 +39,14 @@ impl Spinner {
 
         let emitter = EventEmitter::new();
 
+        let start_time = None;
+
         Self {
             emitter,
             running,
             state,
             paused,
+            start_time,
         }
     }
 
@@ -68,6 +72,7 @@ impl Spinner {
         if self.is_running() {
             return Err(SpinnerError::new("Spinner is already running"));
         }
+        self.start_time = Some(Instant::now());
         self.emitter.emit(&Event::Start.to_string(), &[]);
         let running = self.running.clone();
         let paused = self.paused.clone();
@@ -94,6 +99,7 @@ impl Spinner {
         }
         self.state.stop()?;
         self.running.store(false, Ordering::SeqCst);
+        self.start_time = None;
         Ok(())
     }
 
@@ -108,7 +114,25 @@ impl Spinner {
         }
         *paused = true;
         cvar.notify_one();
+
+        self.emitter
+            .emit(&Event::Pause.to_string(), &[Box::new(self.start_time)]);
         Ok(())
+    }
+
+    pub fn on_pause<F>(&mut self, mut listener: F)
+    where
+        F: FnMut(Option<Duration>) + Sync + Send + 'static,
+    {
+        let callback = move |args: &[Box<dyn std::any::Any>]| {
+            if let Some(arg) = args.first() {
+                if let Some(duration) = arg.downcast_ref::<Option<Duration>>() {
+                    listener(*duration);
+                }
+            }
+        };
+
+        self.emitter.on(&Event::Pause.to_string(), callback);
     }
 
     pub fn resume(&mut self) -> SpinnerResult<()> {
