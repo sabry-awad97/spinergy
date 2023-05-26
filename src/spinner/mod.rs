@@ -307,6 +307,33 @@ mod tests {
     }
 
     #[test]
+    fn test_on_start_listener() {
+        let mut spinner = Spinner::new("Loading ...");
+        let listener_called = Arc::new(AtomicBool::new(false));
+        let listener_called_clone = listener_called.clone();
+
+        let listener = move || {
+            listener_called_clone.store(true, Ordering::SeqCst);
+        };
+
+        spinner.on_start(listener);
+        spinner.start().unwrap();
+        assert!(listener_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_on_start_listener_not_called() {
+        let mut spinner = Spinner::new("Loading ...");
+        let listener_called = Arc::new(AtomicBool::new(false));
+        let listener_called_clone = listener_called.clone();
+        let listener = move || {
+            listener_called_clone.store(true, Ordering::SeqCst);
+        };
+        spinner.on_start(listener);
+        assert!(!listener_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
     fn test_start_running_spinner() {
         let mut spinner = Spinner::new("Loading ...");
         spinner.running.store(true, Ordering::SeqCst);
