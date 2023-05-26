@@ -105,8 +105,32 @@ impl Spinner {
         }
         self.state.stop()?;
         self.running.store(false, Ordering::SeqCst);
+
+        let mut elapsed = Duration::from_secs(0);
+        if let Some(start_time) = self.start_time {
+            elapsed = start_time.elapsed();
+        }
+
         self.start_time = None;
+
+        self.emitter
+            .emit(&Event::Stop.to_string(), &[Box::new(elapsed)]);
         Ok(())
+    }
+
+    pub fn on_stop<F>(&mut self, mut listener: F)
+    where
+        F: FnMut(Duration) + Sync + Send + 'static,
+    {
+        let callback = move |args: &[Box<dyn std::any::Any>]| {
+            if let Some(arg) = args.first() {
+                if let Some(duration) = arg.downcast_ref::<Duration>() {
+                    listener(*duration);
+                }
+            }
+        };
+
+        self.emitter.on(&Event::Stop.to_string(), callback);
     }
 
     pub fn pause(&mut self) -> SpinnerResult<()> {
