@@ -96,13 +96,13 @@ impl SpinnerState {
         let mut dot_count = self.dots.len();
         let mut current_index = 0;
 
-        let (lock, cvar) = &*paused;
-        let mut paused = lock.lock().unwrap();
-
         loop {
             if !running.load(Ordering::SeqCst) {
                 break;
             }
+
+            let (lock, cvar) = &*paused;
+            let mut paused = lock.lock().unwrap();
 
             while *paused {
                 paused = cvar.wait(paused).unwrap();

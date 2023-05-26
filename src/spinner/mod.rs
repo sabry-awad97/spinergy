@@ -458,7 +458,6 @@ mod tests {
         let listener_called = Arc::new(AtomicBool::new(false));
         let listener_called_clone = listener_called.clone();
         let listener = move |duration: Option<Duration>| {
-            println!("duration: {:?}", duration);
             listener_called_clone.store(true, Ordering::SeqCst);
             if let Some(duration) = duration {
                 assert!(duration > Duration::from_secs(0));
@@ -469,7 +468,7 @@ mod tests {
         spinner.pause().unwrap();
         assert!(listener_called.load(Ordering::SeqCst));
     }
-    
+
     #[test]
     fn test_pause_paused_spinner() {
         let mut spinner = Spinner::new("Loading ...");
