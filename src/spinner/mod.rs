@@ -1,10 +1,10 @@
 use colored::Color;
 
 use self::{
-    alignment::Alignment, builtins::SpinnerStyle, message::UpdateMessage, state::SpinnerState,
-    stream::SpinnerStream,
+    alignment::Alignment, builtins::SpinnerStyle, event::Event, message::UpdateMessage,
+    state::SpinnerState, stream::SpinnerStream,
 };
-use crate::{SpinnerError, SpinnerResult};
+use crate::{event_emitter::EventEmitter, SpinnerError, SpinnerResult};
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -22,6 +22,7 @@ mod state;
 pub mod stream;
 
 pub struct Spinner {
+    emitter: EventEmitter,
     running: Arc<AtomicBool>,
     paused: Arc<(Mutex<bool>, Condvar)>,
     state: SpinnerState,
@@ -33,11 +34,33 @@ impl Spinner {
         let paused = Arc::new((Mutex::new(false), Condvar::new()));
 
         let state = SpinnerState::new(message);
+
+        let emitter = EventEmitter::new();
+
         Self {
+            emitter,
             running,
             state,
             paused,
         }
+    }
+
+    #[allow(unused)]
+    fn on<F, T>(&mut self, event_type: Event, mut listener: F)
+    where
+        F: FnMut(&[T]) + Sync + Send + 'static,
+        T: 'static + Copy,
+    {
+        let callback = move |args: &[Box<dyn std::any::Any>]| {
+            let typed_args: Vec<T> = args
+                .iter()
+                .map(|arg| *arg.downcast_ref().unwrap())
+                .collect();
+            listener(&typed_args);
+        };
+
+        let event_name = &event_type.to_string();
+        self.emitter.on(event_name, callback);
     }
 
     pub fn start(&mut self) -> SpinnerResult<()> {
