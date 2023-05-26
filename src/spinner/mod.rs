@@ -352,6 +352,34 @@ mod tests {
     }
 
     #[test]
+    fn test_on_stop_listener() {
+        let mut spinner = Spinner::new("Loading ...");
+        let listener_called = Arc::new(AtomicBool::new(false));
+        let listener_called_clone = listener_called.clone();
+        let listener = move |duration: Duration| {
+            listener_called_clone.store(true, Ordering::SeqCst);
+            assert!(duration > Duration::from_secs(0));
+        };
+        spinner.on_stop(listener);
+        spinner.start().unwrap();
+        std::thread::sleep(Duration::from_millis(100));
+        spinner.stop().unwrap();
+        assert!(listener_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_on_stop_listener_not_called() {
+        let mut spinner = Spinner::new("Loading ...");
+        let listener_called = Arc::new(AtomicBool::new(false));
+        let listener_called_clone = listener_called.clone();
+        let listener = move |_: Duration| {
+            listener_called_clone.store(true, Ordering::SeqCst);
+        };
+        spinner.on_stop(listener);
+        assert!(!listener_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
     fn test_stop_stopped_spinner() {
         let mut spinner = Spinner::new("Loading ...");
         let result = spinner.stop();
