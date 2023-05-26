@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-pub type EventCallback = Box<dyn FnMut(&[Box<dyn std::any::Any>])>;
+pub type EventCallback = Box<dyn FnMut(&[Box<dyn std::any::Any>]) + Send + Sync>;
 pub type EventCallbackList = Vec<EventCallback>;
 pub type EventCallbackMap = HashMap<String, EventCallbackList>;
 pub type SharedEventCallbackMap = Arc<Mutex<EventCallbackMap>>;
@@ -21,7 +21,7 @@ impl EventEmitter {
 
     pub fn on<F>(&mut self, event_name: &str, listener: F)
     where
-        F: FnMut(&[Box<dyn std::any::Any>]) + 'static,
+        F: FnMut(&[Box<dyn std::any::Any>]) + 'static + Sync + Send,
     {
         let mut listeners = self.listeners.lock().unwrap();
         listeners
