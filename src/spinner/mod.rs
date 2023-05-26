@@ -387,6 +387,22 @@ mod tests {
     }
 
     #[test]
+    fn test_stop_emits_stop_event_with_elapsed_duration() {
+        let mut spinner = Spinner::new("Loading");
+        let (tx, rx) = unbounded();
+
+        spinner.on_stop(move |elapsed| {
+            tx.send(elapsed).unwrap();
+        });
+
+        spinner.start().unwrap();
+        spinner.stop().unwrap();
+
+        let elapsed = rx.recv().unwrap();
+        assert!(elapsed > Duration::from_secs(0));
+    }
+
+    #[test]
     fn test_on_stop_listener_not_called() {
         let mut spinner = Spinner::new("Loading ...");
         let listener_called = Arc::new(AtomicBool::new(false));
