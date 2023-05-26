@@ -15,7 +15,7 @@ pub enum UpdateMessage {
     Message(String),
     Style(SpinnerStyle),
     Alignment(Alignment),
-    Colors(Option<Color>, Option<Color>),
+    Colors(Option<Color>, Option<Color>, Option<Color>),
     FramesPerSecond(f64),
     Speed(f64),
     Frames(Vec<String>),

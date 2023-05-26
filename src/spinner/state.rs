@@ -24,6 +24,7 @@ pub struct SpinnerState {
     reverse: Arc<AtomicBool>,
     alignment: Alignment,
     style_color: Option<Color>,
+    text_color: Option<Color>,
     dot_color: Option<Color>,
     interval: Option<Duration>,
 }
@@ -46,6 +47,7 @@ impl SpinnerState {
         let alignment = Alignment::default();
 
         let style_color = Some(Color::Magenta);
+        let text_color = None;
         let dot_color = Some(Color::Magenta);
 
         let interval = None;
@@ -61,6 +63,7 @@ impl SpinnerState {
             reverse,
             alignment,
             style_color,
+            text_color,
             dot_color,
             interval,
         }
@@ -148,8 +151,9 @@ impl SpinnerState {
                         Ok(UpdateMessage::Alignment(alignment)) => {
                             self.alignment = alignment;
                         }
-                        Ok(UpdateMessage::Colors(style_color, dot_color)) => {
+                        Ok(UpdateMessage::Colors(style_color, text_color, dot_color)) => {
                             self.style_color = style_color;
+                            self.text_color = text_color;
                             self.dot_color = dot_color;
                         }
                         Ok(UpdateMessage::FramesPerSecond(fps)) => {
@@ -191,12 +195,20 @@ impl SpinnerState {
             None => frame.to_owned(),
         };
 
+        let colored_text = match self.text_color {
+            Some(color) => format!("{}", text.color(color)),
+            None => text.to_owned(),
+        };
+
         let colored_dots = match self.dot_color {
             Some(color) => format!("{}", dots.color(color)),
             None => dots.to_owned(),
         };
 
-        let output_str = format!("{}{} {}{}", padding_str, colored_frame, text, colored_dots);
+        let output_str = format!(
+            "{}{} {}{}",
+            padding_str, colored_frame, colored_text, colored_dots
+        );
 
         let mut w = self.output.lock().unwrap();
         let clear_line = "\r\x1B[K";

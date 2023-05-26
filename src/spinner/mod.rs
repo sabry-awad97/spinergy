@@ -104,12 +104,20 @@ impl Spinner {
         self.state.update(UpdateMessage::Style(style.into()))
     }
 
-    pub fn set_color_scheme<U>(&mut self, style_color: U, dots_color: U) -> SpinnerResult<()>
+    pub fn set_color_scheme<U>(
+        &mut self,
+        style_color: U,
+        message_color: U,
+        dots_color: U,
+    ) -> SpinnerResult<()>
     where
         U: Into<Option<Color>>,
     {
-        self.state
-            .update(UpdateMessage::Colors(style_color.into(), dots_color.into()))
+        self.state.update(UpdateMessage::Colors(
+            style_color.into(),
+            message_color.into(),
+            dots_color.into(),
+        ))
     }
 
     pub fn set_reverse(&mut self, reverse: bool) -> SpinnerResult<()> {
