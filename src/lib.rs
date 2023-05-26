@@ -6,4 +6,5 @@ pub use spinner::Spinner;
 
 mod config;
 mod error;
+mod event_emitter;
 mod spinner;
