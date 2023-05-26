@@ -1,30 +1,38 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 pub type EventCallback = Box<dyn FnMut(&[Box<dyn std::any::Any>])>;
+pub type EventCallbackList = Vec<EventCallback>;
+pub type EventCallbackMap = HashMap<String, EventCallbackList>;
+pub type SharedEventCallbackMap = Arc<Mutex<EventCallbackMap>>;
 
+#[derive(Clone)]
 pub struct EventEmitter {
-    listeners: HashMap<String, Vec<EventCallback>>,
+    listeners: SharedEventCallbackMap,
 }
 
 impl EventEmitter {
     pub fn new() -> Self {
-        Self {
-            listeners: HashMap::new(),
-        }
+        let listeners = Arc::new(Mutex::new(HashMap::new()));
+        Self { listeners }
     }
 
     pub fn on<F>(&mut self, event_name: &str, listener: F)
     where
         F: FnMut(&[Box<dyn std::any::Any>]) + 'static,
     {
-        self.listeners
+        let mut listeners = self.listeners.lock().unwrap();
+        listeners
             .entry(event_name.to_string())
             .or_insert(Vec::new())
             .push(Box::new(listener));
     }
 
     pub fn emit(&mut self, event_name: &str, args: &[Box<dyn std::any::Any>]) {
-        if let Some(listeners) = self.listeners.get_mut(event_name) {
+        let mut listeners = self.listeners.lock().unwrap();
+        if let Some(listeners) = listeners.get_mut(event_name) {
             for listener in listeners {
                 listener(args);
             }
