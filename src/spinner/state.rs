@@ -109,24 +109,7 @@ impl SpinnerState {
             let frame = &frames[current_index % frames_length];
             let dots = ".".repeat(dot_count.min(self.dots.len()));
 
-            let (width, _) = get_terminal_size();
-            let padding_str = self.alignment.get_horizontal_padding(
-                width - 2,
-                frame.width() + self.text.width() + self.dots.width(),
-            );
-
-            let (colored_dots, colored_frame) = (
-                match self.dot_color.clone() {
-                    Some(color) => format!("{}", dots.color(color)),
-                    None => dots.to_owned(),
-                },
-                match self.style_color.clone() {
-                    Some(color) => format!("{}", frame.color(color)),
-                    None => frame.to_owned(),
-                },
-            );
-
-            self.print_frame(&padding_str, &colored_frame, &colored_dots)?;
+            self.print(frame, &self.text, &dots)?;
 
             current_index = match self.reverse.load(Ordering::SeqCst) {
                 true => (current_index + frames_length - 1) % frames_length,
@@ -196,10 +179,27 @@ impl SpinnerState {
         Ok(())
     }
 
-    fn print_frame(&self, padding_str: &str, frame: &str, dots: &str) -> SpinnerResult<()> {
-        let clear_line = "\r\x1B[K";
-        let output_str = format!("{}{} {}{}", padding_str, frame, self.text, dots);
+    fn print(&self, frame: &str, text: &str, dots: &str) -> SpinnerResult<()> {
+        let (width, _) = get_terminal_size();
+        let padding_str = self.alignment.get_horizontal_padding(
+            width - 2,
+            frame.width() + self.text.width() + self.dots.width(),
+        );
+
+        let colored_frame = match self.style_color {
+            Some(color) => format!("{}", frame.color(color)),
+            None => frame.to_owned(),
+        };
+
+        let colored_dots = match self.dot_color {
+            Some(color) => format!("{}", dots.color(color)),
+            None => dots.to_owned(),
+        };
+
+        let output_str = format!("{}{} {}{}", padding_str, colored_frame, text, colored_dots);
+
         let mut w = self.output.lock().unwrap();
+        let clear_line = "\r\x1B[K";
         write!(w, "{}{}", clear_line, output_str).map_err(|e| SpinnerError::new(&e.to_string()))?;
         w.flush().map_err(|e| SpinnerError::new(&e.to_string()))
     }
