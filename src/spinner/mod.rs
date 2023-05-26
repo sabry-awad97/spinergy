@@ -292,6 +292,8 @@ impl Drop for Spinner {
 
 #[cfg(test)]
 mod tests {
+    use crossbeam::channel::unbounded;
+
     use super::*;
 
     #[test]
@@ -322,6 +324,20 @@ mod tests {
         spinner.on_start(listener);
         spinner.start().unwrap();
         assert!(listener_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_start_emits_start_event() {
+        let mut spinner = Spinner::new("Loading");
+        let (tx, rx) = unbounded();
+
+        spinner.on_start(move || {
+            tx.send(()).unwrap();
+        });
+
+        spinner.start().unwrap();
+
+        assert!(rx.recv().is_ok());
     }
 
     #[test]
