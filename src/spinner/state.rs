@@ -289,7 +289,8 @@ mod tests {
         let spinner_state = SpinnerState::new("Loading ...");
 
         // Send a stop message
-        spinner_state.stop().unwrap();
+        let result = spinner_state.stop();
+        assert!(result.is_ok());
 
         // Receive the stop message
         let spin_message = spinner_state.channel.try_receive().unwrap();
@@ -309,6 +310,14 @@ mod tests {
         });
         running.store(false, Ordering::SeqCst);
         spinner_thread.join().unwrap();
+    }
+
+    #[test]
+    fn test_set_reverse_spinner_state() {
+        let mut state = SpinnerState::new("Loading");
+        state.set_reverse(true);
+        assert_eq!(state.reverse.load(Ordering::SeqCst), true);
+        // Make assertions for setting reverse to false as well
     }
 
     #[test]
