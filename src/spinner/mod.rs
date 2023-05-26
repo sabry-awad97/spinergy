@@ -492,6 +492,22 @@ mod tests {
     }
 
     #[test]
+    fn test_on_resume_listener() {
+        let mut spinner = Spinner::new("Loading ...");
+        let listener_called = Arc::new(AtomicBool::new(false));
+        let listener_called_clone = listener_called.clone();
+        let listener = move |duration: Duration| {
+            listener_called_clone.store(true, Ordering::SeqCst);
+            assert!(duration > Duration::from_secs(0));
+        };
+        spinner.on_resume(listener);
+        spinner.start().unwrap();
+        spinner.pause().unwrap();
+        spinner.resume().unwrap();
+        assert!(listener_called.load(Ordering::SeqCst));
+    }
+
+    #[test]
     fn test_resume_running_spinner() {
         let mut spinner = Spinner::new("Loading ...");
         spinner.start().unwrap();
