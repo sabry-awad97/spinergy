@@ -25,6 +25,7 @@ pub struct SpinnerState {
     alignment: Alignment,
     style_color: Option<Color>,
     dot_color: Option<Color>,
+    interval: Option<Duration>,
 }
 
 impl SpinnerState {
@@ -46,6 +47,9 @@ impl SpinnerState {
 
         let style_color = Some(Color::Magenta);
         let dot_color = Some(Color::Magenta);
+
+        let interval = None;
+
         Self {
             channel,
             output,
@@ -58,6 +62,7 @@ impl SpinnerState {
             alignment,
             style_color,
             dot_color,
+            interval,
         }
     }
 
@@ -130,7 +135,10 @@ impl SpinnerState {
 
             dot_count = (dot_count + 1) % (frames_length * 4);
 
-            thread::sleep(Duration::from_millis(self.frame_duration));
+            thread::sleep(
+                self.interval
+                    .unwrap_or(Duration::from_millis(self.frame_duration)),
+            );
 
             if let Ok(spin_message) = self.channel.try_receive() {
                 match spin_message {
@@ -160,6 +168,17 @@ impl SpinnerState {
                         Ok(UpdateMessage::Colors(style_color, dot_color)) => {
                             self.style_color = style_color;
                             self.dot_color = dot_color;
+                        }
+                        Ok(UpdateMessage::FramesPerSecond(fps)) => {
+                            let frame_duration = 1.0 / fps;
+                            let duration = Duration::from_secs_f64(frame_duration);
+                            self.interval = Some(duration);
+                        }
+                        Ok(UpdateMessage::Speed(rpm)) => {
+                            const SECONDS_PER_MINUTE: f64 = 60.0;
+                            let duration = Duration::from_secs_f64(SECONDS_PER_MINUTE / rpm)
+                                / self.frames.len() as u32;
+                            self.interval = Some(duration);
                         }
                         Err(_) => return Err("Failed to receive update message".into()),
                     },

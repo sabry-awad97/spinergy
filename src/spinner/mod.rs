@@ -123,6 +123,21 @@ impl Spinner {
         self.state
             .update(UpdateMessage::Alignment(alignment.into()))
     }
+
+    pub fn set_fps<V>(&mut self, fps: V) -> SpinnerResult<()>
+    where
+        V: Into<f64>,
+    {
+        self.state
+            .update(UpdateMessage::FramesPerSecond(fps.into()))
+    }
+
+    pub fn set_speed<V>(&mut self, rpm: V) -> SpinnerResult<()>
+    where
+        V: Into<f64>,
+    {
+        self.state.update(UpdateMessage::Speed(rpm.into()))
+    }
 }
 
 impl Drop for Spinner {

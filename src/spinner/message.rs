@@ -16,4 +16,6 @@ pub enum UpdateMessage {
     Style(SpinnerStyle),
     Alignment(Alignment),
     Colors(Option<Color>, Option<Color>),
+    FramesPerSecond(f64),
+    Speed(f64),
 }
