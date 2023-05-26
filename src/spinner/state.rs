@@ -321,6 +321,13 @@ mod tests {
     }
 
     #[test]
+    fn test_print_spinner_state() {
+        let state = SpinnerState::new("Loading");
+        let result = state.print("|", "Text", "...");
+        assert!(result.is_ok());
+    }
+
+    #[test]
     fn test_trim_trailing_dots_mixed_text_and_dots() {
         let input = String::from("Hello... World....");
         let expected = (String::from("Hello... World"), String::from("...."));
