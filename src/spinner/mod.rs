@@ -11,6 +11,7 @@ use std::{
         Arc, Condvar, Mutex,
     },
     thread,
+    time::Duration,
 };
 
 pub mod alignment;
@@ -67,12 +68,24 @@ impl Spinner {
         if self.is_running() {
             return Err(SpinnerError::new("Spinner is already running"));
         }
+        self.emitter.emit(&Event::Start.to_string(), &[]);
         let running = self.running.clone();
         let paused = self.paused.clone();
         let mut state = self.state.clone();
         thread::spawn(move || state.spin(running, paused));
         self.running.store(true, Ordering::SeqCst);
         Ok(())
+    }
+
+    pub fn on_start<F>(&mut self, mut listener: F)
+    where
+        F: FnMut() + Sync + Send + 'static,
+    {
+        let callback = move |_: &[Box<dyn std::any::Any>]| {
+            listener();
+        };
+
+        self.emitter.on(&Event::Start.to_string(), callback);
     }
 
     pub fn stop(&mut self) -> SpinnerResult<()> {
